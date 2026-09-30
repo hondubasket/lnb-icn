@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>LNB-ICN — Overlay</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+html, body { width:1920px; height:1080px; background:transparent; overflow:hidden; font-family:'Bebas Neue',sans-serif; }
+
+/* ── SCOREBUG ── */
+#scorebug-wrap {
+  position:absolute; bottom:52px; left:50%; transform:translateX(-50%);
+  display:flex; flex-direction:column; align-items:center;
+  z-index:10;
+  opacity:1; transition:opacity 0.4s ease, transform 0.4s ease;
+}
+#scorebug-wrap.hidden { opacity:0; transform:translateX(-50%) translateY(16px); pointer-events:none; }
+
+#scorebug {
+  display:flex; align-items:stretch; border-radius:8px; overflow:hidden;
+  box-shadow:0 4px 40px rgba(0,0,0,0.75);
+  min-width:680px;
+}
+
+.team-block {
+  display:flex; align-items:center; gap:12px; padding:10px 20px;
+  flex:1; position:relative;
+}
+.team-block.home { flex-direction:row; background:var(--home-color, #1B2A6B); }
+.team-block.away { flex-direction:row-reverse; background:var(--away-color, #F07A1A); }
+
+.team-logo {
+  width:44px; height:44px; object-fit:contain; flex-shrink:0;
+  filter:drop-shadow(0 1px 3px rgba(0,0,0,0.4));
+}
+.team-logo.hidden { display:none; }
+
+.team-info { display:flex; flex-direction:column; }
+.team-block.away .team-info { align-items:flex-end; }
+
+.team-name {
+  font-family:'Bebas Neue',sans-serif;
+  font-size:34px; letter-spacing:1px; color:#fff;
+  text-shadow:0 2px 6px rgba(0,0,0,0.4);
+  white-space:nowrap; line-height:1;
+}
+.team-fouls {
+  font-family:'Inter',sans-serif;
+  font-size:11px; font-weight:700; letter-spacing:1.5px;
+  color:rgba(255,255,255,0.6); text-transform:uppercase;
+}
+.team-fouls span { color:#fff; }
+
+/* possession arrow */
+.possession-arrow {
+  width:0; height:0;
+  border-top:8px solid transparent;
+  border-bottom:8px solid transparent;
+  opacity:0; transition:opacity 0.3s;
+  flex-shrink:0;
+}
+.team-block.home .possession-arrow { border-left:12px solid rgba(255,255,255,0.9); }
+.team-block.away .possession-arrow { border-right:12px solid rgba(255,255,255,0.9); }
+.possession-arrow.visible { opacity:1; }
+
+/* center panel */
+.score-center {
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  background:#0a0a0a; padding:8px 22px; min-width:160px; position:relative;
+}
+
+/* top accent line */
+.score-center::before {
+  content:''; position:absolute; top:0; left:0; right:0;
+  height:3px; background:linear-gradient(90deg, #F07A1A, #8DC63F);
+}
+
+.score-row {
+  display:flex; align-items:center; gap:14px;
+}
+
+.score-num {
+  font-family:'Bebas Neue',sans-serif;
+  font-size:68px; line-height:1; color:#fff;
+  min-width:52px; text-align:center;
+}
+
+.score-dash {
+  font-family:'Bebas Neue',sans-serif;
+  font-size:38px; color:rgba(255,255,255,0.3);
+}
+
+.game-info {
+  display:flex; align-items:center; gap:10px; margin-top:1px;
+}
+
+.quarter-label {
+  font-family:'Inter',sans-serif;
+  font-size:11px; font-weight:700; letter-spacing:2px;
+  color:rgba(255,255,255,0.5); text-transform:uppercase;
+}
+
+.clock-display {
+  font-family:'Bebas Neue',sans-serif;
+  font-size:18px; color:#fff; letter-spacing:1px;
+}
+
+/* LNB logo small */
+.lnb-badge {
+  position:absolute; bottom:4px; right:6px;
+  font-family:'Bebas Neue',sans-serif; font-size:9px;
+  color:rgba(255,255,255,0.3); letter-spacing:1px;
+}
+
+/* timeout dots */
+.timeout-dots {
+  display:flex; gap:3px; margin-top:3px;
+}
+.timeout-dots.away { flex-direction:row-reverse; }
+.t-dot {
+  width:8px; height:8px; border-radius:50%;
+  background:rgba(255,255,255,0.9);
+}
+.t-dot.used { background:rgba(255,255,255,0.2); }
+
+/* ── TICKER ── */
+#ticker-wrap {
+  position:absolute; bottom:0; left:0; right:0;
+  height:44px; overflow:hidden;
+  display:flex; align-items:stretch;
+  opacity:0; transition:opacity 0.4s ease;
+}
+#ticker-wrap.active { opacity:1; }
+
+.ticker-badge {
+  background:#1B2A6B; display:flex; align-items:center; padding:0 18px;
+  flex-shrink:0; gap:8px;
+}
+.ticker-badge-bar {
+  width:3px; height:28px; background:#8DC63F; border-radius:2px;
+}
+.ticker-badge-text {
+  font-family:'Bebas Neue',sans-serif; font-size:18px; letter-spacing:2px;
+  color:#fff;
+}
+
+.ticker-scroll-area {
+  flex:1; background:rgba(0,0,0,0.88); overflow:hidden; position:relative;
+}
+#ticker-track {
+  position:absolute; top:50%; transform:translateY(-50%);
+  white-space:nowrap;
+  animation:tickerScroll 22s linear infinite;
+}
+@keyframes tickerScroll {
+  0%   { left:100%; }
+  100% { left:-100%; }
+}
+#ticker-msg {
+  font-family:'Inter',sans-serif; font-size:17px; font-weight:600; color:#fff;
+  letter-spacing:0.3px;
+}
+
+/* ── TIMEOUT OVERLAY ── */
+#timeout-overlay {
+  position:absolute; inset:0; z-index:30;
+  display:flex; align-items:center; justify-content:center;
+  background:rgba(0,0,0,0.75);
+  opacity:0; pointer-events:none; transition:opacity 0.4s;
+}
+#timeout-overlay.active { opacity:1; }
+.timeout-card {
+  background:#0a0a0a; border-radius:12px; padding:40px 80px;
+  border-top:4px solid #F07A1A;
+  text-align:center;
+}
+.timeout-label {
+  font-family:'Bebas Neue',sans-serif; font-size:28px; letter-spacing:4px;
+  color:rgba(255,255,255,0.5); margin-bottom:4px;
+}
+.timeout-team-name {
+  font-family:'Bebas Neue',sans-serif; font-size:72px; letter-spacing:2px; color:#fff;
+}
+
+/* ── HALFTIME OVERLAY ── */
+#halftime-overlay {
+  position:absolute; inset:0; z-index:30;
+  display:flex; align-items:center; justify-content:center;
+  background:rgba(0,0,0,0.85);
+  opacity:0; pointer-events:none; transition:opacity 0.5s;
+}
+#halftime-overlay.active { opacity:1; }
+.halftime-card {
+  text-align:center;
+}
+.halftime-title {
+  font-family:'Bebas Neue',sans-serif; font-size:96px; letter-spacing:6px;
+  color:#fff; line-height:1;
+}
+.halftime-sub {
+  font-family:'Inter',sans-serif; font-size:18px; font-weight:600;
+  letter-spacing:3px; color:#8DC63F; text-transform:uppercase; margin-top:8px;
+}
+.halftime-scores {
+  margin-top:32px; display:flex; align-items:center; gap:24px;
+  justify-content:center;
+}
+.ht-team { font-family:'Bebas Neue',sans-serif; font-size:36px; color:rgba(255,255,255,0.7); }
+.ht-score { font-family:'Bebas Neue',sans-serif; font-size:80px; color:#fff; min-width:70px; text-align:center; }
+.ht-dash { font-family:'Bebas Neue',sans-serif; font-size:48px; color:rgba(255,255,255,0.3); }
+
+/* ── INTRO OVERLAY ── */
+#intro-overlay {
+  position:absolute; inset:0; z-index:40;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  background:linear-gradient(160deg, #0d1829 0%, #0a0a0a 60%, #1a2e12 100%);
+  opacity:0; pointer-events:none; transition:opacity 0.6s;
+}
+#intro-overlay.active { opacity:1; }
+.intro-logo { width:380px; margin-bottom:32px; }
+.intro-competition {
+  font-family:'Bebas Neue',sans-serif; font-size:28px; letter-spacing:6px;
+  color:#8DC63F; text-transform:uppercase;
+}
+.intro-line {
+  width:120px; height:3px;
+  background:linear-gradient(90deg, #F07A1A, #8DC63F);
+  margin:20px 0; border-radius:2px;
+}
+
+/* ── COUNTDOWN ── */
+#countdown-overlay {
+  position:absolute; inset:0; z-index:35;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  background:rgba(0,0,0,0.82);
+  opacity:0; pointer-events:none; transition:opacity 0.4s;
+}
+#countdown-overlay.active { opacity:1; }
+#countdown-time {
+  font-family:'Bebas Neue',sans-serif; font-size:160px; color:#fff;
+  line-height:1; text-shadow:0 0 60px rgba(248,120,26,0.4);
+}
+.countdown-label {
+  font-family:'Inter',sans-serif; font-size:16px; font-weight:700;
+  letter-spacing:4px; color:#F07A1A; text-transform:uppercase; margin-top:8px;
+}
+
+/* ── SPONSOR BANNER ── */
+#sponsor-wrap {
+  position:absolute; inset:0; z-index:20;
+  display:flex; align-items:center; justify-content:center;
+  background:rgba(0,0,0,0.88);
+  opacity:0; pointer-events:none; transition:opacity 0.45s;
+}
+#sponsor-wrap.in  { opacity:1; }
+#sponsor-wrap.out { opacity:0; }
+#sponsor-img { max-width:720px; max-height:420px; object-fit:contain; }
+</style>
+</head>
+<body>
+
+<!-- SCOREBUG -->
+<div id="scorebug-wrap">
+  <div id="scorebug">
+    <!-- HOME -->
+    <div class="team-block home" id="home-block">
+      <img class="team-logo hidden" id="home-logo" src="" alt="">
+      <div class="team-info">
+        <div class="team-name" id="home-name">LOCAL</div>
+        <div class="team-fouls">Faltas: <span id="home-fouls">0</span></div>
+        <div class="timeout-dots" id="home-timeouts"></div>
+      </div>
+      <div class="possession-arrow" id="home-arrow"></div>
+    </div>
+
+    <!-- CENTER -->
+    <div class="score-center">
+      <div class="score-row">
+        <span class="score-num" id="home-pts">0</span>
+        <span class="score-dash">–</span>
+        <span class="score-num" id="away-pts">0</span>
+      </div>
+      <div class="game-info">
+        <span class="quarter-label" id="quarter-label">Q1</span>
+        <span class="clock-display" id="clock-display">10:00</span>
+      </div>
+      <span class="lnb-badge">LNB · ICN</span>
+    </div>
+
+    <!-- AWAY -->
+    <div class="team-block away" id="away-block">
+      <div class="possession-arrow" id="away-arrow"></div>
+      <div class="team-info">
+        <div class="team-name" id="away-name">VISITANTE</div>
+        <div class="team-fouls">Faltas: <span id="away-fouls">0</span></div>
+        <div class="timeout-dots away" id="away-timeouts"></div>
+      </div>
+      <img class="team-logo hidden" id="away-logo" src="" alt="">
+    </div>
+  </div>
+</div>
+
+<!-- TICKER -->
+<div id="ticker-wrap">
+  <div class="ticker-badge">
+    <div class="ticker-badge-bar"></div>
+    <div class="ticker-badge-text">LNB · ICN</div>
+  </div>
+  <div class="ticker-scroll-area">
+    <div id="ticker-track">
+      <span id="ticker-msg"></span>
+    </div>
+  </div>
+</div>
+
+<!-- TIMEOUT OVERLAY -->
+<div id="timeout-overlay">
+  <div class="timeout-card">
+    <div class="timeout-label">TIEMPO FUERA</div>
+    <div class="timeout-team-name" id="timeout-team-name">—</div>
+  </div>
+</div>
+
+<!-- HALFTIME OVERLAY -->
+<div id="halftime-overlay">
+  <div class="halftime-card">
+    <div class="halftime-title">MEDIO<br>TIEMPO</div>
+    <div class="halftime-sub">Liga Nacional de Baloncesto ICN</div>
+    <div class="halftime-scores">
+      <div class="ht-team" id="ht-home-name">LOCAL</div>
+      <div class="ht-score" id="ht-home-pts">0</div>
+      <div class="ht-dash">–</div>
+      <div class="ht-score" id="ht-away-pts">0</div>
+      <div class="ht-team" id="ht-away-name">VISITANTE</div>
+    </div>
+  </div>
+</div>
+
+<!-- INTRO OVERLAY -->
+<div id="intro-overlay">
+  <img class="intro-logo" src="/assets/logos/LNBICN_ColorBlanco.png" alt="LNB ICN">
+  <div class="intro-line"></div>
+  <div class="intro-competition" id="intro-competition-name">Liga Nacional de Baloncesto ICN</div>
+</div>
+
+<!-- COUNTDOWN OVERLAY -->
+<div id="countdown-overlay">
+  <div id="countdown-time">00:00</div>
+  <div class="countdown-label">Inicio del partido</div>
+</div>
+
+<!-- SPONSOR BANNER -->
+<div id="sponsor-wrap">
+  <img id="sponsor-img" src="" alt="">
+</div>
+
+<script>
+const BASE = '';
+let pollTimer, _spT = null, _cdTimer = null;
+let _cdSecs = 0;
+
+function el(id) { return document.getElementById(id); }
+function fmt(s) {
+  const m = Math.floor(s / 60), sec = Math.floor(s % 60);
+  return `${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
+}
+
+function startPoll() {
+  clearInterval(pollTimer);
+  pollTimer = setInterval(() => {
+    fetch(BASE + '/api/state')
+      .then(r => r.json())
+      .then(d => applyState(d))
+      .catch(() => {});
+  }, 1200);
+}
+
+function applyState(s) {
+  if (!s) return;
+  const ha = s.teams?.a, aw = s.teams?.b;
+
+  if (ha) {
+    el('home-name').textContent = ha.abbr || ha.name || 'LOCAL';
+    el('home-pts').textContent  = ha.points ?? 0;
+    el('home-fouls').textContent = ha.fouls ?? 0;
+    el('home-block').style.background = ha.color || '#1B2A6B';
+    renderTimeouts('home-timeouts', ha.timeouts ?? 5, false);
+    if (ha.logo) { el('home-logo').src = ha.logo; el('home-logo').classList.remove('hidden'); }
+    else { el('home-logo').classList.add('hidden'); }
+    // halftime
+    el('ht-home-name').textContent = ha.abbr || ha.name || 'LOCAL';
+    el('ht-home-pts').textContent  = ha.points ?? 0;
+  }
+  if (aw) {
+    el('away-name').textContent = aw.abbr || aw.name || 'VISITANTE';
+    el('away-pts').textContent  = aw.points ?? 0;
+    el('away-fouls').textContent = aw.fouls ?? 0;
+    el('away-block').style.background = aw.color || '#F07A1A';
+    renderTimeouts('away-timeouts', aw.timeouts ?? 5, true);
+    if (aw.logo) { el('away-logo').src = aw.logo; el('away-logo').classList.remove('hidden'); }
+    else { el('away-logo').classList.add('hidden'); }
+    el('ht-away-name').textContent = aw.abbr || aw.name || 'VISITANTE';
+    el('ht-away-pts').textContent  = aw.points ?? 0;
+  }
+
+  // quarter
+  const q = s.quarter || 1;
+  el('quarter-label').textContent = q <= 4 ? `Q${q}` : `OT${q - 4}`;
+  el('clock-display').textContent = fmt(s.quarterSeconds ?? 600);
+
+  // possession
+  const pa = el('home-arrow'), pb = el('away-arrow');
+  pa.classList.toggle('visible', s.possession === 'a');
+  pb.classList.toggle('visible', s.possession === 'b');
+
+  // scorebug visibility
+  const bug = el('scorebug-wrap');
+  if (s.visibility?.scorebug === false) bug.classList.add('hidden');
+  else bug.classList.remove('hidden');
+
+  // ticker
+  applyTicker(s.ticker);
+
+  // overlays
+  el('timeout-overlay').classList.toggle('active', !!s.timeoutOverlay?.active);
+  if (s.timeoutOverlay?.team) {
+    const t = s.teams[s.timeoutOverlay.team];
+    el('timeout-team-name').textContent = t?.name || t?.abbr || '—';
+  }
+
+  el('halftime-overlay').classList.toggle('active', !!s.halftimeOverlay?.active);
+  el('intro-overlay').classList.toggle('active', !!s.introOverlay?.active);
+
+  if (s.countdownOverlay?.active) {
+    el('countdown-overlay').classList.add('active');
+    startCountdown(s.countdownOverlay.seconds || 600);
+  } else {
+    el('countdown-overlay').classList.remove('active');
+    stopCountdown();
+  }
+
+  // sponsor
+  if (s.sponsorBanner?.active) showSponsor(s.sponsorBanner);
+  else if (!s.sponsorBanner?.active && window._lastSpSrc) hideSponsorNow();
+
+  // competition name
+  if (s.config?.competitionName)
+    el('intro-competition-name').textContent = s.config.competitionName;
+}
+
+function renderTimeouts(id, count, reverse) {
+  const cont = el(id);
+  cont.innerHTML = '';
+  for (let i = 0; i < 5; i++) {
+    const d = document.createElement('div');
+    d.className = 't-dot' + (i >= count ? ' used' : '');
+    cont.appendChild(d);
+  }
+}
+
+function applyTicker(t) {
+  const w = el('ticker-wrap');
+  if (t?.active && t.text) {
+    el('ticker-msg').textContent = t.text;
+    w.classList.add('active');
+  } else {
+    w.classList.remove('active');
+  }
+}
+
+let _cdSec = 0, _cdRunning = false;
+function startCountdown(secs) {
+  if (_cdRunning && Math.abs(_cdSec - secs) < 3) return;
+  stopCountdown();
+  _cdSec = secs; _cdRunning = true;
+  el('countdown-time').textContent = fmt(_cdSec);
+  _cdTimer = setInterval(() => {
+    if (_cdSec <= 0) { stopCountdown(); return; }
+    _cdSec--;
+    el('countdown-time').textContent = fmt(_cdSec);
+  }, 1000);
+}
+function stopCountdown() { clearInterval(_cdTimer); _cdRunning = false; }
+
+function showSponsor(data) {
+  const wrap = el('sponsor-wrap'), img = el('sponsor-img'), bug = el('scorebug-wrap');
+  clearTimeout(_spT);
+  window._lastSpSrc = data.src;
+  bug.classList.add('hidden');
+  setTimeout(() => {
+    wrap.className = ''; void wrap.offsetWidth;
+    img.src = data.src || '';
+    wrap.classList.add('in');
+  }, 380);
+  _spT = setTimeout(() => hideSponsor(), ((data.duration || 8) * 1000) + 380);
+}
+function hideSponsor() {
+  const wrap = el('sponsor-wrap'), bug = el('scorebug-wrap');
+  wrap.classList.remove('in'); wrap.classList.add('out');
+  setTimeout(() => { wrap.className = ''; window._lastSpSrc = ''; bug.classList.remove('hidden'); }, 450);
+}
+function hideSponsorNow() { clearTimeout(_spT); hideSponsor(); }
+
+startPoll();
+</script>
+</body>
+</html>

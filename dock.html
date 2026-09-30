@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>LNB-ICN — Control</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#0d0d0d; --surface:#181818; --card:#212121;
+  --border:#2e2e2e; --text:#f0f0f0; --muted:#888;
+  --orange:#F07A1A; --navy:#1B2A6B; --green:#8DC63F;
+  --red:#e53935; --radius:10px;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:var(--bg); color:var(--text); font-family:'Inter',sans-serif; min-height:100vh; }
+
+/* TOP BAR */
+.topbar {
+  background:var(--surface); border-bottom:1px solid var(--border);
+  padding:12px 24px; display:flex; align-items:center; gap:16px;
+}
+.topbar-logo {
+  font-family:'Bebas Neue',sans-serif; font-size:22px; letter-spacing:2px;
+  background:linear-gradient(90deg,#F07A1A,#8DC63F); -webkit-background-clip:text;
+  -webkit-text-fill-color:transparent;
+}
+.status-pill {
+  display:flex; align-items:center; gap:6px;
+  background:var(--card); border:1px solid var(--border);
+  border-radius:20px; padding:4px 12px;
+  font-size:12px; font-weight:600; color:var(--muted);
+}
+.dot { width:8px; height:8px; border-radius:50%; background:var(--muted); }
+.dot.on { background:#4caf50; box-shadow:0 0 6px #4caf50; }
+.topbar-right { margin-left:auto; display:flex; gap:8px; }
+.btn-reset { background:transparent; border:1px solid #444; color:var(--muted);
+  padding:5px 14px; border-radius:6px; cursor:pointer; font-size:12px;
+  transition:all 0.2s; }
+.btn-reset:hover { border-color:var(--red); color:var(--red); }
+
+/* TABS */
+.tabs { display:flex; border-bottom:1px solid var(--border); background:var(--surface); padding:0 24px; }
+.tab { padding:12px 20px; font-size:13px; font-weight:600; letter-spacing:0.5px;
+  color:var(--muted); cursor:pointer; border-bottom:2px solid transparent;
+  transition:all 0.2s; text-transform:uppercase; }
+.tab.active { color:var(--orange); border-color:var(--orange); }
+.tab-pane { display:none; padding:20px 24px; }
+.tab-pane.active { display:block; }
+
+/* LAYOUT */
+.grid2 { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+.grid3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; }
+
+/* CARDS */
+.card {
+  background:var(--card); border:1px solid var(--border); border-radius:var(--radius);
+  padding:16px;
+}
+.card-title {
+  font-size:10px; font-weight:700; letter-spacing:2px; text-transform:uppercase;
+  color:var(--muted); margin-bottom:12px;
+}
+
+/* TEAM CARD */
+.team-card-header {
+  display:flex; align-items:center; gap:10px; margin-bottom:14px;
+}
+.team-color-pill {
+  width:14px; height:14px; border-radius:50%; flex-shrink:0;
+}
+.team-card-name { font-weight:700; font-size:15px; }
+
+/* SCORE DISPLAY */
+.score-display {
+  text-align:center;
+  background:var(--surface); border-radius:8px; padding:16px 0;
+  margin-bottom:14px; border:1px solid var(--border);
+}
+.score-big { font-family:'Bebas Neue',sans-serif; font-size:72px; line-height:1; color:#fff; }
+.score-label { font-size:11px; color:var(--muted); margin-top:2px; font-weight:600; letter-spacing:1px; }
+
+/* BUTTONS */
+.btn-row { display:flex; gap:8px; justify-content:center; flex-wrap:wrap; }
+.btn {
+  border:none; border-radius:8px; cursor:pointer; font-weight:700;
+  font-size:14px; padding:10px 18px; transition:all 0.15s;
+  font-family:'Inter',sans-serif;
+}
+.btn:active { transform:scale(0.95); }
+.btn-primary { background:var(--orange); color:#fff; }
+.btn-primary:hover { background:#d96a0f; }
+.btn-navy { background:var(--navy); color:#fff; }
+.btn-navy:hover { background:#142060; }
+.btn-green { background:var(--green); color:#0d0d0d; }
+.btn-green:hover { background:#7ab535; }
+.btn-red { background:var(--red); color:#fff; }
+.btn-red:hover { background:#c62828; }
+.btn-ghost { background:transparent; border:1px solid var(--border); color:var(--text); }
+.btn-ghost:hover { border-color:#fff; }
+.btn-sm { padding:7px 14px; font-size:13px; }
+.btn-lg { padding:14px 28px; font-size:18px; letter-spacing:1px; font-family:'Bebas Neue',sans-serif; }
+
+.btn-pts {
+  width:52px; height:52px; border-radius:10px;
+  font-family:'Bebas Neue',sans-serif; font-size:24px;
+  display:flex; align-items:center; justify-content:center; flex-shrink:0;
+}
+.btn-pts-minus { background:#333; color:#fff; border:none; cursor:pointer; border-radius:8px; }
+.btn-pts-minus:hover { background:#444; }
+
+/* FOUL / TIMEOUT ROW */
+.stat-row { display:flex; align-items:center; justify-content:space-between; margin-top:10px; }
+.stat-label { font-size:12px; color:var(--muted); font-weight:600; }
+.stat-val { font-size:20px; font-weight:700; color:#fff; min-width:32px; text-align:center; }
+.stat-btns { display:flex; gap:6px; }
+
+/* FORM ELEMENTS */
+.form-row { display:flex; flex-direction:column; gap:5px; margin-bottom:12px; }
+.form-label { font-size:11px; color:var(--muted); font-weight:600; letter-spacing:0.5px; }
+.form-input {
+  background:var(--surface); border:1px solid var(--border); border-radius:6px;
+  color:#fff; padding:8px 12px; font-size:14px; font-family:'Inter',sans-serif;
+  outline:none; transition:border 0.2s;
+}
+.form-input:focus { border-color:var(--orange); }
+.color-picker { width:100%; height:36px; border-radius:6px; cursor:pointer; border:1px solid var(--border); }
+
+/* QUARTER CONTROL */
+.quarter-nav {
+  display:flex; align-items:center; justify-content:center; gap:16px; margin-bottom:16px;
+}
+.quarter-display {
+  font-family:'Bebas Neue',sans-serif; font-size:48px; color:#fff;
+  min-width:80px; text-align:center;
+}
+
+/* POSSESSION */
+.possession-btns { display:flex; gap:8px; }
+.poss-btn {
+  flex:1; padding:10px; border-radius:8px; border:2px solid var(--border);
+  background:transparent; color:var(--muted); cursor:pointer; font-weight:700;
+  font-size:13px; transition:all 0.2s; font-family:'Inter',sans-serif;
+}
+.poss-btn.active-home { border-color:var(--orange); color:var(--orange); background:rgba(240,122,26,0.1); }
+.poss-btn.active-away { border-color:var(--navy); color:#7a9fff; background:rgba(27,42,107,0.15); }
+
+/* SCREENS GRID */
+.screen-btn {
+  display:flex; flex-direction:column; align-items:center; gap:8px;
+  background:var(--card); border:1px solid var(--border); border-radius:10px;
+  padding:20px 12px; cursor:pointer; transition:all 0.2s;
+  font-size:12px; font-weight:700; letter-spacing:0.5px; color:var(--muted);
+  text-transform:uppercase; text-align:center;
+}
+.screen-btn:hover { border-color:#555; color:#fff; }
+.screen-btn.on { border-color:var(--green); color:var(--green); background:rgba(141,198,63,0.07); }
+.screen-icon { font-size:28px; }
+
+/* TICKER */
+.ticker-wrap { display:flex; gap:8px; }
+.ticker-wrap .form-input { flex:1; }
+
+/* SPONSORS GRID */
+.sponsor-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:10px; }
+.sponsor-card {
+  background:var(--surface); border:1px solid var(--border); border-radius:8px;
+  padding:14px 10px; text-align:center; cursor:pointer; transition:all 0.2s;
+}
+.sponsor-card:hover { border-color:#555; }
+.sponsor-card.active { border-color:var(--orange); background:rgba(240,122,26,0.08); }
+.sponsor-name { font-size:12px; font-weight:700; margin-top:8px; color:var(--muted); }
+.sponsor-card.active .sponsor-name { color:var(--orange); }
+
+/* SECTION DIVIDER */
+.section { margin-bottom:20px; }
+.section-title {
+  font-size:10px; font-weight:700; letter-spacing:2px; text-transform:uppercase;
+  color:var(--muted); margin-bottom:10px; padding-bottom:6px;
+  border-bottom:1px solid var(--border);
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-logo">🏀 LNB · ICN</div>
+  <div class="status-pill">
+    <div class="dot" id="ws-dot"></div>
+    <span id="ws-label">offline</span>
+  </div>
+  <div class="topbar-right">
+    <button class="btn-reset" onclick="resetGame()">↺ RESET</button>
+  </div>
+</div>
+
+<!-- TABS -->
+<div class="tabs">
+  <div class="tab active" data-tab="partido">🏀 Partido</div>
+  <div class="tab" data-tab="pantallas">📺 Pantallas</div>
+  <div class="tab" data-tab="sponsors">🏢 Sponsors</div>
+  <div class="tab" data-tab="config">⚙️ Config</div>
+</div>
+
+<!-- ══ TAB: PARTIDO ══ -->
+<div class="tab-pane active" id="tab-partido">
+
+  <!-- QUARTER & POSSESSION -->
+  <div class="card" style="margin-bottom:16px;">
+    <div class="card-title">Cuarto y Posesión</div>
+    <div class="quarter-nav">
+      <button class="btn btn-ghost btn-sm" onclick="setQuarter(currentQ - 1)">◀</button>
+      <div class="quarter-display" id="quarter-disp">Q1</div>
+      <button class="btn btn-ghost btn-sm" onclick="setQuarter(currentQ + 1)">▶</button>
+    </div>
+    <div class="possession-btns">
+      <button class="poss-btn" id="poss-a" onclick="setPossession('a')">◀ <span id="poss-a-name">LOCAL</span></button>
+      <button class="poss-btn btn-ghost btn-sm" onclick="setPossession(null)" style="flex:0.6;font-size:11px;">NINGUNO</button>
+      <button class="poss-btn" id="poss-b" onclick="setPossession('b')"><span id="poss-b-name">VISITANTE</span> ▶</button>
+    </div>
+  </div>
+
+  <div class="grid2">
+
+    <!-- TEAM A (LOCAL) -->
+    <div class="card">
+      <div class="team-card-header">
+        <div class="team-color-pill" id="color-pill-a" style="background:#1B2A6B;"></div>
+        <div class="team-card-name" id="label-a">LOCAL</div>
+      </div>
+
+      <div class="score-display">
+        <div class="score-big" id="pts-a">0</div>
+        <div class="score-label">PUNTOS</div>
+      </div>
+      <div class="btn-row" style="margin-bottom:10px;">
+        <button class="btn btn-pts btn-pts-minus" onclick="point('a',-1)">–1</button>
+        <button class="btn btn-pts btn-primary" onclick="point('a',1)">+1</button>
+        <button class="btn btn-pts btn-primary" onclick="point('a',2)">+2</button>
+        <button class="btn btn-pts btn-primary" onclick="point('a',3)">+3</button>
+      </div>
+
+      <div class="stat-row">
+        <span class="stat-label">FALTAS</span>
+        <div class="stat-btns">
+          <button class="btn btn-ghost btn-sm" onclick="foul('a',-1)">–</button>
+          <span class="stat-val" id="fouls-a">0</span>
+          <button class="btn btn-red btn-sm" onclick="foul('a',1)">+</button>
+        </div>
+      </div>
+
+      <div class="stat-row">
+        <span class="stat-label">TIEMPOS</span>
+        <div class="stat-btns">
+          <button class="btn btn-ghost btn-sm" onclick="timeout_add('a')">+</button>
+          <span class="stat-val" id="timeouts-a">5</span>
+          <button class="btn btn-navy btn-sm" onclick="timeout_use('a')">USAR</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- TEAM B (VISITANTE) -->
+    <div class="card">
+      <div class="team-card-header">
+        <div class="team-color-pill" id="color-pill-b" style="background:#F07A1A;"></div>
+        <div class="team-card-name" id="label-b">VISITANTE</div>
+      </div>
+
+      <div class="score-display">
+        <div class="score-big" id="pts-b">0</div>
+        <div class="score-label">PUNTOS</div>
+      </div>
+      <div class="btn-row" style="margin-bottom:10px;">
+        <button class="btn btn-pts btn-pts-minus" onclick="point('b',-1)">–1</button>
+        <button class="btn btn-pts btn-primary" onclick="point('b',1)">+1</button>
+        <button class="btn btn-pts btn-primary" onclick="point('b',2)">+2</button>
+        <button class="btn btn-pts btn-primary" onclick="point('b',3)">+3</button>
+      </div>
+
+      <div class="stat-row">
+        <span class="stat-label">FALTAS</span>
+        <div class="stat-btns">
+          <button class="btn btn-ghost btn-sm" onclick="foul('b',-1)">–</button>
+          <span class="stat-val" id="fouls-b">0</span>
+          <button class="btn btn-red btn-sm" onclick="foul('b',1)">+</button>
+        </div>
+      </div>
+
+      <div class="stat-row">
+        <span class="stat-label">TIEMPOS</span>
+        <div class="stat-btns">
+          <button class="btn btn-ghost btn-sm" onclick="timeout_add('b')">+</button>
+          <span class="stat-val" id="timeouts-b">5</span>
+          <button class="btn btn-navy btn-sm" onclick="timeout_use('b')">USAR</button>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /grid2 -->
+
+  <!-- TICKER -->
+  <div class="card" style="margin-top:16px;">
+    <div class="card-title">Cintillo de texto</div>
+    <div class="ticker-wrap">
+      <input class="form-input" id="ticker-text" placeholder="Texto del cintillo…" type="text">
+      <button class="btn btn-primary" onclick="sendTicker(true)">ACTIVAR</button>
+      <button class="btn btn-ghost" onclick="sendTicker(false)">QUITAR</button>
+    </div>
+  </div>
+
+</div><!-- /tab-partido -->
+
+<!-- ══ TAB: PANTALLAS ══ -->
+<div class="tab-pane" id="tab-pantallas">
+
+  <div class="section">
+    <div class="section-title">Overlays</div>
+    <div class="grid3">
+      <div class="screen-btn" id="scr-scorebug" onclick="toggleScoreBug()">
+        <span class="screen-icon">📊</span>MARCADOR
+      </div>
+      <div class="screen-btn" id="scr-intro" onclick="toggleOverlay('introOverlay','scr-intro')">
+        <span class="screen-icon">🏀</span>INTRO
+      </div>
+      <div class="screen-btn" id="scr-halftime" onclick="toggleOverlay('halftimeOverlay','scr-halftime')">
+        <span class="screen-icon">⏸</span>MEDIO TIEMPO
+      </div>
+      <div class="screen-btn" id="scr-timeout" onclick="toggleTimeoutOverlay()">
+        <span class="screen-icon">⏱</span>TIEMPO FUERA
+      </div>
+      <div class="screen-btn" id="scr-countdown" onclick="toggleCountdown()">
+        <span class="screen-icon">⏳</span>CUENTA REGRESIVA
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Cuenta regresiva</div>
+    <div class="grid2">
+      <div>
+        <div class="form-row">
+          <label class="form-label">Minutos</label>
+          <input class="form-input" id="cd-min" type="number" value="10" min="0" max="99">
+        </div>
+      </div>
+      <div style="display:flex;align-items:flex-end;">
+        <button class="btn btn-primary" style="width:100%;" onclick="setCountdown()">ESTABLECER</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Tiempo fuera — equipo</div>
+    <div style="display:flex;gap:10px;">
+      <button class="btn btn-navy" style="flex:1;" onclick="send({type:'timeout',active:true,team:'a'})">
+        ⏱ <span id="to-team-a-name">LOCAL</span>
+      </button>
+      <button class="btn btn-primary" style="flex:1;" onclick="send({type:'timeout',active:true,team:'b'})">
+        ⏱ <span id="to-team-b-name">VISITANTE</span>
+      </button>
+      <button class="btn btn-ghost" onclick="send({type:'timeout',active:false,team:null})">QUITAR</button>
+    </div>
+  </div>
+
+</div><!-- /tab-pantallas -->
+
+<!-- ══ TAB: SPONSORS ══ -->
+<div class="tab-pane" id="tab-sponsors">
+  <div class="card" style="margin-bottom:16px;">
+    <div class="card-title">Duración del banner (segundos)</div>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <input class="form-input" id="sp-duration" type="number" value="8" min="3" max="60" style="width:90px;">
+      <span style="color:var(--muted);font-size:13px;">segundos</span>
+    </div>
+  </div>
+  <div class="sponsor-grid" id="sponsor-grid"></div>
+</div>
+
+<!-- ══ TAB: CONFIG ══ -->
+<div class="tab-pane" id="tab-config">
+  <div class="grid2">
+    <!-- TEAM A CONFIG -->
+    <div class="card">
+      <div class="card-title">Equipo Local (A)</div>
+      <div class="form-row">
+        <label class="form-label">Abreviatura (3-4 letras)</label>
+        <input class="form-input" id="cfg-a-abbr" type="text" maxlength="5" placeholder="LOC">
+      </div>
+      <div class="form-row">
+        <label class="form-label">Nombre completo</label>
+        <input class="form-input" id="cfg-a-name" type="text" placeholder="Nombre del equipo">
+      </div>
+      <div class="form-row">
+        <label class="form-label">Color</label>
+        <input class="color-picker" id="cfg-a-color" type="color" value="#1B2A6B">
+      </div>
+      <button class="btn btn-primary" style="width:100%;margin-top:4px;" onclick="saveTeam('a')">GUARDAR EQUIPO A</button>
+    </div>
+
+    <!-- TEAM B CONFIG -->
+    <div class="card">
+      <div class="card-title">Equipo Visitante (B)</div>
+      <div class="form-row">
+        <label class="form-label">Abreviatura (3-4 letras)</label>
+        <input class="form-input" id="cfg-b-abbr" type="text" maxlength="5" placeholder="VIS">
+      </div>
+      <div class="form-row">
+        <label class="form-label">Nombre completo</label>
+        <input class="form-input" id="cfg-b-name" type="text" placeholder="Nombre del equipo">
+      </div>
+      <div class="form-row">
+        <label class="form-label">Color</label>
+        <input class="color-picker" id="cfg-b-color" type="color" value="#F07A1A">
+      </div>
+      <button class="btn btn-primary" style="width:100%;margin-top:4px;" onclick="saveTeam('b')">GUARDAR EQUIPO B</button>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:16px;">
+    <div class="card-title">Configuración del partido</div>
+    <div class="grid2">
+      <div class="form-row">
+        <label class="form-label">Nombre de la competencia</label>
+        <input class="form-input" id="cfg-comp" type="text" value="Liga Nacional de Baloncesto ICN">
+      </div>
+      <div class="form-row">
+        <label class="form-label">Duración de cuarto (minutos)</label>
+        <input class="form-input" id="cfg-qdur" type="number" value="10" min="1" max="30">
+      </div>
+    </div>
+    <button class="btn btn-green" onclick="saveConfig()">GUARDAR CONFIG</button>
+  </div>
+</div>
+
+<script>
+const SERVER = '';  // mismo origen; cambia a URL absoluta si dock.html se sirve desde otro lado
+let _state = {};
+let currentQ = 1;
+let _overlayState = {};
+let _scorebugOn = true;
+let _possession = null;
+
+// ── POLLING ──
+function startPoll() {
+  setInterval(async () => {
+    try {
+      const r = await fetch(SERVER + '/api/state');
+      const data = await r.json();
+      applyState(data);
+      el('ws-dot').classList.add('on');
+      el('ws-label').textContent = 'online';
+    } catch {
+      el('ws-dot').classList.remove('on');
+      el('ws-label').textContent = 'offline';
+    }
+  }, 1200);
+}
+
+async function send(msg) {
+  try {
+    const r = await fetch(SERVER + '/api/action', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(msg)
+    });
+    const data = await r.json();
+    applyState(data);
+  } catch (e) { console.error(e); }
+}
+
+// ── APPLY STATE ──
+function applyState(s) {
+  if (!s) return;
+  _state = s;
+  const ha = s.teams?.a, aw = s.teams?.b;
+
+  if (ha) {
+    el('pts-a').textContent = ha.points ?? 0;
+    el('fouls-a').textContent = ha.fouls ?? 0;
+    el('timeouts-a').textContent = ha.timeouts ?? 5;
+    el('label-a').textContent = ha.abbr || ha.name || 'LOCAL';
+    el('color-pill-a').style.background = ha.color || '#1B2A6B';
+    el('poss-a-name').textContent = ha.abbr || 'LOCAL';
+    el('to-team-a-name').textContent = ha.abbr || 'LOCAL';
+  }
+  if (aw) {
+    el('pts-b').textContent = aw.points ?? 0;
+    el('fouls-b').textContent = aw.fouls ?? 0;
+    el('timeouts-b').textContent = aw.timeouts ?? 5;
+    el('label-b').textContent = aw.abbr || aw.name || 'VISITANTE';
+    el('color-pill-b').style.background = aw.color || '#F07A1A';
+    el('poss-b-name').textContent = aw.abbr || 'VISITANTE';
+    el('to-team-b-name').textContent = aw.abbr || 'VISITANTE';
+  }
+
+  currentQ = s.quarter || 1;
+  el('quarter-disp').textContent = currentQ <= 4 ? `Q${currentQ}` : `OT${currentQ - 4}`;
+
+  _possession = s.possession || null;
+  el('poss-a').className = 'poss-btn' + (_possession === 'a' ? ' active-home' : '');
+  el('poss-b').className = 'poss-btn' + (_possession === 'b' ? ' active-away' : '');
+
+  _scorebugOn = s.visibility?.scorebug !== false;
+  el('scr-scorebug').classList.toggle('on', _scorebugOn);
+
+  _overlayState = {
+    introOverlay: !!s.introOverlay?.active,
+    halftimeOverlay: !!s.halftimeOverlay?.active,
+    timeoutOverlay: !!s.timeoutOverlay?.active,
+    countdownOverlay: !!s.countdownOverlay?.active,
+  };
+  el('scr-intro').classList.toggle('on', _overlayState.introOverlay);
+  el('scr-halftime').classList.toggle('on', _overlayState.halftimeOverlay);
+  el('scr-timeout').classList.toggle('on', _overlayState.timeoutOverlay);
+  el('scr-countdown').classList.toggle('on', _overlayState.countdownOverlay);
+}
+
+// ── GAME ACTIONS ──
+function point(team, delta) { send({ type: 'point', team, delta }); }
+function foul(team, delta)  { send({ type: 'foul',  team, delta }); }
+function timeout_use(team)  { send({ type: 'timeout', team, active: true }); }
+function timeout_add(team)  {
+  const cur = _state.teams?.[team]?.timeouts ?? 0;
+  send({ type: 'team', team, data: { timeouts: cur + 1 } });
+}
+function setQuarter(q) {
+  if (q < 1 || q > 8) return;
+  send({ type: 'setQuarter', quarter: q });
+}
+function setPossession(team) { send({ type: 'possession', team }); }
+
+function sendTicker(active) {
+  const text = el('ticker-text').value.trim();
+  send({ type: 'ticker', text, active });
+}
+
+// ── SCREENS ──
+function toggleScoreBug() {
+  _scorebugOn = !_scorebugOn;
+  send({ type: 'toggle', element: 'scorebug', value: _scorebugOn });
+}
+function toggleOverlay(type, scrId) {
+  const newVal = !_overlayState[type];
+  send({ type, active: newVal });
+}
+function toggleTimeoutOverlay() {
+  const newVal = !_overlayState.timeoutOverlay;
+  send({ type: 'timeout', active: newVal, team: _state.timeoutOverlay?.team || null });
+}
+function toggleCountdown() {
+  if (_overlayState.countdownOverlay) {
+    send({ type: 'countdownOverlay', active: false });
+  } else {
+    setCountdown();
+  }
+}
+function setCountdown() {
+  const min = parseInt(el('cd-min').value) || 10;
+  send({ type: 'countdownOverlay', active: true, seconds: min * 60 });
+}
+
+// ── CONFIG ──
+function saveTeam(team) {
+  const abbr  = el(`cfg-${team}-abbr`).value.trim().toUpperCase();
+  const name  = el(`cfg-${team}-name`).value.trim();
+  const color = el(`cfg-${team}-color`).value;
+  const data  = {};
+  if (abbr)  data.abbr  = abbr;
+  if (name)  data.name  = name;
+  if (color) data.color = color;
+  send({ type: 'team', team, data });
+}
+function saveConfig() {
+  const competitionName = el('cfg-comp').value.trim();
+  const quarterDuration = (parseInt(el('cfg-qdur').value) || 10) * 60;
+  send({ type: 'config', data: { competitionName, quarterDuration } });
+}
+
+function resetGame() {
+  if (confirm('¿Reiniciar todo el partido?')) send({ type: 'reset' });
+}
+
+// ── SPONSORS ──
+const SPONSORS = [
+  'dunk','electromecanica','fenabah','firenze','fundacion',
+  'icn_app','icn_tv','Nuba','recovery cintillo','resurreccion','SEL Sport','sporade'
+];
+const SP_EXT = {
+  'icn_app':'jpg','icn_tv':'jpg','Nuba':'jpg',
+  'recovery cintillo':'png','SEL Sport':'png','sporade':'png'
+};
+
+let activeSponsor = null;
+
+function buildSponsorGrid() {
+  const grid = el('sponsor-grid');
+  grid.innerHTML = '';
+  SPONSORS.forEach(name => {
+    const ext = SP_EXT[name] || 'png';
+    const src = `/assets/sponsors/${encodeURIComponent(name)}.${ext}`;
+    const card = document.createElement('div');
+    card.className = 'sponsor-card';
+    card.id = `sp-${name}`;
+    card.innerHTML = `<div style="font-size:11px;color:#555;">[logo]</div>
+      <div class="sponsor-name">${name}</div>`;
+    card.onclick = () => {
+      if (activeSponsor === name) {
+        activeSponsor = null;
+        send({ type: 'sponsorBanner', active: false });
+        card.classList.remove('active');
+      } else {
+        if (activeSponsor) el(`sp-${activeSponsor}`)?.classList.remove('active');
+        activeSponsor = name;
+        const dur = parseInt(el('sp-duration').value) || 8;
+        send({ type: 'sponsorBanner', active: true, src, duration: dur });
+        card.classList.add('active');
+      }
+    };
+    grid.appendChild(card);
+  });
+}
+
+// ── TABS ──
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+    tab.classList.add('active');
+    el('tab-' + tab.dataset.tab).classList.add('active');
+  });
+});
+
+function el(id) { return document.getElementById(id); }
+
+buildSponsorGrid();
+startPoll();
+</script>
+</body>
+</html>
