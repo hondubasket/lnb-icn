@@ -394,6 +394,13 @@ body { background:var(--bg); color:var(--text); font-family:'Inter',sans-serif; 
         <label class="form-label">Color</label>
         <input class="color-picker" id="cfg-a-color" type="color" value="#1B2A6B">
       </div>
+      <div class="form-row">
+        <label class="form-label">Logo</label>
+        <select class="form-input" id="cfg-a-logo">
+          <option value="">— Sin logo —</option>
+        </select>
+        <img id="cfg-a-logo-preview" src="" style="width:40px;height:40px;object-fit:contain;margin-top:6px;display:none;">
+      </div>
       <button class="btn btn-primary" style="width:100%;margin-top:4px;" onclick="saveTeam('a')">GUARDAR EQUIPO A</button>
     </div>
 
@@ -411,6 +418,13 @@ body { background:var(--bg); color:var(--text); font-family:'Inter',sans-serif; 
       <div class="form-row">
         <label class="form-label">Color</label>
         <input class="color-picker" id="cfg-b-color" type="color" value="#F07A1A">
+      </div>
+      <div class="form-row">
+        <label class="form-label">Logo</label>
+        <select class="form-input" id="cfg-b-logo">
+          <option value="">— Sin logo —</option>
+        </select>
+        <img id="cfg-b-logo-preview" src="" style="width:40px;height:40px;object-fit:contain;margin-top:6px;display:none;">
       </div>
       <button class="btn btn-primary" style="width:100%;margin-top:4px;" onclick="saveTeam('b')">GUARDAR EQUIPO B</button>
     </div>
@@ -433,7 +447,7 @@ body { background:var(--bg); color:var(--text); font-family:'Inter',sans-serif; 
 </div>
 
 <script>
-const SERVER = '';  // mismo origen; cambia a URL absoluta si dock.html se sirve desde otro lado
+const SERVER = 'https://lnb-icn-production.up.railway.app';
 let _state = {};
 let currentQ = 1;
 let _overlayState = {};
@@ -482,6 +496,7 @@ function applyState(s) {
     el('color-pill-a').style.background = ha.color || '#1B2A6B';
     el('poss-a-name').textContent = ha.abbr || 'LOCAL';
     el('to-team-a-name').textContent = ha.abbr || 'LOCAL';
+    if (ha.logo) syncLogoSelect('a', ha.logo);
   }
   if (aw) {
     el('pts-b').textContent = aw.points ?? 0;
@@ -491,6 +506,7 @@ function applyState(s) {
     el('color-pill-b').style.background = aw.color || '#F07A1A';
     el('poss-b-name').textContent = aw.abbr || 'VISITANTE';
     el('to-team-b-name').textContent = aw.abbr || 'VISITANTE';
+    if (aw.logo) syncLogoSelect('b', aw.logo);
   }
 
   currentQ = s.quarter || 1;
@@ -564,9 +580,11 @@ function saveTeam(team) {
   const abbr  = el(`cfg-${team}-abbr`).value.trim().toUpperCase();
   const name  = el(`cfg-${team}-name`).value.trim();
   const color = el(`cfg-${team}-color`).value;
+  const logo  = el(`cfg-${team}-logo`).value;
   const data  = {};
   if (abbr)  data.abbr  = abbr;
   if (name)  data.name  = name;
+  data.logo = logo;
   if (color) data.color = color;
   send({ type: 'team', team, data });
 }
@@ -633,7 +651,41 @@ document.querySelectorAll('.tab').forEach(tab => {
 function el(id) { return document.getElementById(id); }
 
 buildSponsorGrid();
+loadTeamLogos();
 startPoll();
+
+// ── TEAM LOGOS ──
+const TEAM_LOGOS = [
+  { label:'Hondubasket', file:'hondubasketLogo.png' },
+  { label:'Ingenieros',  file:'ingenierosLogo.png'  },
+  { label:'Policía',     file:'policiaLogo.png'     },
+  { label:'Sigua',       file:'siguaLogo.png'       },
+  { label:'UNAH',        file:'unahLogo.png'        },
+];
+function syncLogoSelect(team, logoUrl) {
+  const sel = el(`cfg-${team}-logo`);
+  if (sel && sel.value !== logoUrl) {
+    sel.value = logoUrl;
+    const prev = el(`cfg-${team}-logo-preview`);
+    if (prev && logoUrl) { prev.src = logoUrl; prev.style.display = 'block'; }
+  }
+}
+function loadTeamLogos() {
+  ['a','b'].forEach(team => {
+    const sel = el(`cfg-${team}-logo`);
+    TEAM_LOGOS.forEach(({ label, file }) => {
+      const opt = document.createElement('option');
+      opt.value = `/assets/teams/${file}`;
+      opt.textContent = label;
+      sel.appendChild(opt);
+    });
+    sel.addEventListener('change', () => {
+      const prev = el(`cfg-${team}-logo-preview`);
+      if (sel.value) { prev.src = sel.value; prev.style.display = 'block'; }
+      else { prev.style.display = 'none'; }
+    });
+  });
+}
 </script>
 </body>
 </html>

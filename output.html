@@ -20,18 +20,18 @@ html, body { width:1920px; height:1080px; background:transparent; overflow:hidde
 #scorebug {
   display:flex; align-items:stretch; border-radius:8px; overflow:hidden;
   box-shadow:0 4px 40px rgba(0,0,0,0.75);
-  min-width:680px;
+  min-width:960px;
 }
 
 .team-block {
-  display:flex; align-items:center; gap:12px; padding:10px 20px;
+  display:flex; align-items:center; gap:16px; padding:12px 28px;
   flex:1; position:relative;
 }
 .team-block.home { flex-direction:row; background:var(--home-color, #1B2A6B); }
 .team-block.away { flex-direction:row-reverse; background:var(--away-color, #F07A1A); }
 
 .team-logo {
-  width:44px; height:44px; object-fit:contain; flex-shrink:0;
+  width:58px; height:58px; object-fit:contain; flex-shrink:0;
   filter:drop-shadow(0 1px 3px rgba(0,0,0,0.4));
 }
 .team-logo.hidden { display:none; }
@@ -41,7 +41,7 @@ html, body { width:1920px; height:1080px; background:transparent; overflow:hidde
 
 .team-name {
   font-family:'Bebas Neue',sans-serif;
-  font-size:34px; letter-spacing:1px; color:#fff;
+  font-size:40px; letter-spacing:1px; color:#fff;
   text-shadow:0 2px 6px rgba(0,0,0,0.4);
   white-space:nowrap; line-height:1;
 }
@@ -67,7 +67,7 @@ html, body { width:1920px; height:1080px; background:transparent; overflow:hidde
 /* center panel */
 .score-center {
   display:flex; flex-direction:column; align-items:center; justify-content:center;
-  background:#0a0a0a; padding:8px 22px; min-width:160px; position:relative;
+  background:#0a0a0a; padding:10px 32px; min-width:200px; position:relative;
 }
 
 /* top accent line */
@@ -246,16 +246,18 @@ html, body { width:1920px; height:1080px; background:transparent; overflow:hidde
   letter-spacing:4px; color:#F07A1A; text-transform:uppercase; margin-top:8px;
 }
 
-/* ── SPONSOR BANNER ── */
+/* ── SPONSOR BANNER — franja inferior 1/5 pantalla ── */
 #sponsor-wrap {
-  position:absolute; inset:0; z-index:20;
+  position:absolute; bottom:0; left:0; right:0;
+  height:216px; /* 1/5 de 1080px */
+  z-index:20;
   display:flex; align-items:center; justify-content:center;
-  background:rgba(0,0,0,0.88);
+  background:transparent;
   opacity:0; pointer-events:none; transition:opacity 0.45s;
 }
 #sponsor-wrap.in  { opacity:1; }
 #sponsor-wrap.out { opacity:0; }
-#sponsor-img { max-width:720px; max-height:420px; object-fit:contain; }
+#sponsor-img { max-width:960px; max-height:200px; object-fit:contain; }
 </style>
 </head>
 <body>
@@ -356,7 +358,7 @@ html, body { width:1920px; height:1080px; background:transparent; overflow:hidde
 </div>
 
 <script>
-const BASE = '';
+const BASE = 'https://lnb-icn-production.up.railway.app';
 let pollTimer, _spT = null, _cdTimer = null;
 let _cdSecs = 0;
 
@@ -471,8 +473,7 @@ function applyTicker(t) {
 
 let _cdSec = 0, _cdRunning = false;
 function startCountdown(secs) {
-  if (_cdRunning && Math.abs(_cdSec - secs) < 3) return;
-  stopCountdown();
+  if (_cdRunning) return;           // ya corriendo — no reiniciar
   _cdSec = secs; _cdRunning = true;
   el('countdown-time').textContent = fmt(_cdSec);
   _cdTimer = setInterval(() => {
@@ -481,24 +482,21 @@ function startCountdown(secs) {
     el('countdown-time').textContent = fmt(_cdSec);
   }, 1000);
 }
-function stopCountdown() { clearInterval(_cdTimer); _cdRunning = false; }
+function stopCountdown() { clearInterval(_cdTimer); _cdRunning = false; _cdSec = 0; }
 
 function showSponsor(data) {
-  const wrap = el('sponsor-wrap'), img = el('sponsor-img'), bug = el('scorebug-wrap');
+  const wrap = el('sponsor-wrap'), img = el('sponsor-img');
   clearTimeout(_spT);
   window._lastSpSrc = data.src;
-  bug.classList.add('hidden');
-  setTimeout(() => {
-    wrap.className = ''; void wrap.offsetWidth;
-    img.src = data.src || '';
-    wrap.classList.add('in');
-  }, 380);
-  _spT = setTimeout(() => hideSponsor(), ((data.duration || 8) * 1000) + 380);
+  wrap.className = ''; void wrap.offsetWidth;
+  img.src = data.src || '';
+  wrap.classList.add('in');
+  _spT = setTimeout(() => hideSponsor(), (data.duration || 8) * 1000);
 }
 function hideSponsor() {
-  const wrap = el('sponsor-wrap'), bug = el('scorebug-wrap');
+  const wrap = el('sponsor-wrap');
   wrap.classList.remove('in'); wrap.classList.add('out');
-  setTimeout(() => { wrap.className = ''; window._lastSpSrc = ''; bug.classList.remove('hidden'); }, 450);
+  setTimeout(() => { wrap.className = ''; window._lastSpSrc = ''; }, 450);
 }
 function hideSponsorNow() { clearTimeout(_spT); hideSponsor(); }
 
