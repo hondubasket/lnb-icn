@@ -29,6 +29,15 @@ function defaultState() {
 
 let state = defaultState();
 
+// ── RELOJ INTERNO ──
+setInterval(() => {
+  if (state.clockRunning && state.quarterSeconds > 0) {
+    state.quarterSeconds -= 1;
+  } else if (state.clockRunning && state.quarterSeconds <= 0) {
+    state.clockRunning = false;
+  }
+}, 1000);
+
 app.get('/health', (req, res) => res.status(200).send('OK'));
 app.get('/api/state', (req, res) => res.json(state));
 
